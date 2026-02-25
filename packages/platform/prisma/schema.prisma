@@ -1,0 +1,124 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PennTools Prisma schema
+//
+// Multi-user readiness strategy (authless v1):
+//   - Every table that holds user data has a user_id column (UUID).
+//   - user_id is created on first visit and stored in an HTTP-only cookie.
+//   - All queries are scoped: WHERE user_id = $userId.
+//   - When UPenn SSO is added (v2), a new row is inserted in `users` with
+//     type=authenticated, and an optional mapping table links the anonymous
+//     UUID to the authenticated user's sub. Historic rows stay intact.
+//
+// Rationale for NOT persisting tool registry metadata in DB (tools table):
+//   The tool registry (list of available tools + metadata) is a code-time
+//   concern — tools are deployed with the app, not dynamically installed at
+//   runtime. Storing it in the DB adds a sync step (migrations on every tool
+//   addition) with no real benefit for v1. The tools table is left here as an
+//   OPTIONAL design target for a future admin panel or dynamic discovery.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  type      UserType @default(ANONYMOUS)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  chats     Chat[]
+  messages  Message[]
+  toolData  ToolData[]
+
+  @@map("users")
+}
+
+enum UserType {
+  ANONYMOUS
+  AUTHENTICATED
+}
+
+// ── Chats ─────────────────────────────────────────────────────────────────────
+
+model Chat {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId])
+  @@map("chats")
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+model Message {
+  id        String      @id @default(uuid())
+  chatId    String      @map("chat_id")
+  userId    String      @map("user_id")
+  role      MessageRole
+  content   String      @db.Text
+  /// Null for user/assistant messages; set to the tool id for tool messages.
+  toolId    String?     @map("tool_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  TOOL
+}
+
+// ── Tool data ─────────────────────────────────────────────────────────────────
+
+/// Generic key-value store scoped to (userId, toolId).
+/// Allows each tool to persist arbitrary JSON without needing its own table.
+model ToolData {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  toolId    String   @map("tool_id")
+  key       String
+  jsonValue Json     @map("json_value")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId, key])
+  @@index([userId, toolId])
+  @@map("tool_data")
+}
+
+// ── Tools (OPTIONAL metadata table) ──────────────────────────────────────────
+
+/// Persisted tool metadata — optional for v1. Useful for an admin panel or
+/// marketplace UI that needs to list tools without booting the Node process.
+/// Keep in sync with the code registry at deploy time (e.g. via a seed script).
+model Tool {
+  id           String   @id // matches ToolManifest.id
+  title        String
+  description  String   @db.Text
+  image        String
+  /// JSON array of contributor strings, e.g. ["alice", "bob"]
+  contributors Json
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("tools")
+}
