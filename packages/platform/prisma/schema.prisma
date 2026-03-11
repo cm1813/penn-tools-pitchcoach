@@ -33,6 +33,11 @@ model User {
   type      UserType @default(ANONYMOUS)
   createdAt DateTime @default(now()) @map("created_at")
 
+  /// Display name from SSO — null for anonymous users.
+  name      String?
+  /// UPenn identifier (pennid / eppn) from SSO — null for anonymous users.
+  pennId    String?  @unique @map("penn_id")
+
   chats     Chat[]
   messages  Message[]
   toolData  ToolData[]

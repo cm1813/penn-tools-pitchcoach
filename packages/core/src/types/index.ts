@@ -12,6 +12,13 @@ export interface User {
   id: UserId;
   type: UserType;
   createdAt: Date;
+  /** Display name — null until the user logs in via SSO. */
+  name: string | null;
+  /**
+   * UPenn identifier (e.g. pennid / eppn) from SSO.
+   * Null for anonymous users; set when linkToAuthenticatedUser is called.
+   */
+  pennId: string | null;
 }
 
 // ── Chat ────────────────────────────────────────────────────────────────────

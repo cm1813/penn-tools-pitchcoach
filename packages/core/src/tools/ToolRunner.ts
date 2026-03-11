@@ -43,7 +43,7 @@ export class ToolAccessDeniedError extends Error {
  */
 export interface ToolRunnerDeps {
   registry: ToolRegistry;
-  contextFactory: (toolId: string, userId: UserId) => ToolContext;
+  contextFactory: (toolId: string, userId: UserId) => ToolContext | Promise<ToolContext>;
   logger: Logger;
 }
 
@@ -51,7 +51,7 @@ export interface ToolRunnerDeps {
 
 export class ToolRunner {
   private readonly registry: ToolRegistry;
-  private readonly contextFactory: (toolId: string, userId: UserId) => ToolContext;
+  private readonly contextFactory: (toolId: string, userId: UserId) => ToolContext | Promise<ToolContext>;
   private readonly logger: Logger;
 
   constructor(deps: ToolRunnerDeps) {
@@ -86,7 +86,7 @@ export class ToolRunner {
       throw new ToolAccessDeniedError(toolId, userId);
     }
 
-    const context = this.contextFactory(toolId, userId);
+    const context = await this.contextFactory(toolId, userId);
     const start = Date.now();
 
     this.logger.info("tool.run.start", { toolId, userId });

@@ -18,7 +18,7 @@ import type { ToolDataRepository } from "../repositories/ToolDataRepository.js";
 import type { UserRepository } from "../repositories/UserRepository.js";
 import type { LLMProvider } from "../llm/LLMProvider.js";
 import type { Analytics } from "../analytics/Analytics.js";
-import type { UserId } from "../types/index.js";
+import type { UserId, User } from "../types/index.js";
 
 // ── Logger ───────────────────────────────────────────────────────────────────
 // Minimal interface so tools can log without importing console directly
@@ -46,6 +46,13 @@ export interface ToolConfig {
 export interface ToolContext {
   /** Identity of the user who triggered this tool invocation. */
   userId: UserId;
+
+  /**
+   * Full profile of the current user, pre-resolved by the platform.
+   * Tools read this directly — they never fetch the user themselves.
+   * name and pennId are null for anonymous (not-yet-logged-in) users.
+   */
+  currentUser: User;
 
   /** Repositories — tools interact with the DB through these interfaces only. */
   db: {

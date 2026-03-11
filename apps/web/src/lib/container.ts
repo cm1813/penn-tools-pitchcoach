@@ -34,7 +34,7 @@ import { toolRegistry, ToolRunner } from "@penntools/core/tools";
 import type { ToolContext } from "@penntools/core/tools";
 import type { LLMProvider } from "@penntools/core/llm";
 import type { Analytics } from "@penntools/core/analytics";
-import type { UserId } from "@penntools/core/types";
+import type { UserId, User } from "@penntools/core/types";
 
 // ── Tool bootstrap ────────────────────────────────────────────────────────────
 // TODO: import and register tools here once they are built.
@@ -117,13 +117,18 @@ export const logger = {
 
 export const toolRunner = new ToolRunner({
   registry: toolRegistry,
-  contextFactory: (toolId: string, userId: UserId): ToolContext => ({
-    userId,
-    db: repositories,
-    llm,
-    analytics,
-    logger,
-    config: { toolId },
-  }),
+  contextFactory: async (toolId: string, userId: UserId): Promise<ToolContext> => {
+    const user = await repositories.users.findById(userId);
+    if (!user) throw new Error(`User not found: ${userId}`);
+    return {
+      userId,
+      currentUser: user,
+      db: repositories,
+      llm,
+      analytics,
+      logger,
+      config: { toolId },
+    };
+  },
   logger,
 });
