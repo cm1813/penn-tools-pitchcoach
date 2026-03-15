@@ -7,6 +7,7 @@ type NavItem = "playground" | "api-reference";
 
 type UserResponse = { id: string; type: string; name: string | null; pennId: string | null };
 type ChatsResponse = { chats: Array<{ id: string; title: string }> };
+type LlmResponse = { content: string; model: string; usage: { promptTokens: number; completionTokens: number; totalTokens: number } };
 
 type ApiState<T> = { status: "idle" | "loading" | "success" | "error"; data: T | null; error: string | null };
 
@@ -28,6 +29,8 @@ const prose: React.CSSProperties = {
 export default function PlatformPlaygroundPage() {
   const [activeNav, setActiveNav] = useState<NavItem>("playground");
   const [userApi, setUserApi] = useState<ApiState<UserResponse>>(idle());
+  const [llmApi, setLlmApi] = useState<ApiState<LlmResponse>>(idle());
+  const [llmPrompt, setLlmPrompt] = useState("");
   const [chatsApi, setChatsApi] = useState<ApiState<ChatsResponse>>(idle());
 
   async function runUserApi() {
@@ -39,6 +42,29 @@ export default function PlatformPlaygroundPage() {
       setUserApi({ status: "success", data, error: null });
     } catch (err) {
       setUserApi({ status: "error", data: null, error: String(err) });
+    }
+  }
+
+  async function runLlmApi() {
+    if (!llmPrompt.trim()) return;
+    setLlmApi({ status: "loading", data: null, error: null });
+    try {
+      const apiKey = typeof window !== "undefined"
+        ? (localStorage.getItem("penntools_api_key") ?? "")
+        : "";
+      const res = await fetch("/api/llm/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "X-Api-Key": apiKey } : {}),
+        },
+        body: JSON.stringify({ prompt: llmPrompt }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: LlmResponse = await res.json();
+      setLlmApi({ status: "success", data, error: null });
+    } catch (err) {
+      setLlmApi({ status: "error", data: null, error: String(err) });
     }
   }
 
@@ -78,6 +104,12 @@ export default function PlatformPlaygroundPage() {
                 <LabeledRow label="Penn ID" value={data.pennId} nullable />
               </div>
             )}
+          />
+          <LlmCard
+            prompt={llmPrompt}
+            onPromptChange={setLlmPrompt}
+            onSend={runLlmApi}
+            apiState={llmApi}
           />
           <ApiCard
             title="Chats API"
@@ -547,6 +579,116 @@ function ApiCard<T>({
           }}
         >
           {renderResult(apiState.data)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── LlmCard ────────────────────────────────────────────────────────────────────
+
+function LlmCard({
+  prompt,
+  onPromptChange,
+  onSend,
+  apiState,
+}: {
+  prompt: string;
+  onPromptChange: (val: string) => void;
+  onSend: () => void;
+  apiState: ApiState<LlmResponse>;
+}) {
+  const isLoading = apiState.status === "loading";
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e5e5",
+        borderRadius: 10,
+        padding: "20px 22px",
+        marginBottom: 20,
+        background: "#fff",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <span style={{ fontSize: 16, fontWeight: 700, color: "#0d0d0d" }}>LLM API</span>
+        <Code>POST /api/llm/complete</Code>
+      </div>
+      <p style={{ ...prose, marginBottom: 14 }}>
+        Send a prompt to the configured LLM and get a text response. Tools use{" "}
+        <Code>context.llm.complete()</Code> the same way — for question answering, summarisation,
+        classification, or generating structured output from user input.
+      </p>
+      <textarea
+        value={prompt}
+        onChange={(e) => onPromptChange(e.target.value)}
+        placeholder="Type a prompt…"
+        rows={3}
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          padding: "10px 12px",
+          borderRadius: 7,
+          border: "1px solid #d1d5db",
+          fontSize: 13,
+          fontFamily: "inherit",
+          resize: "vertical",
+          outline: "none",
+          marginBottom: 10,
+          color: "#111827",
+        }}
+      />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: apiState.status === "idle" ? 0 : 14 }}>
+        <button
+          onClick={onSend}
+          disabled={isLoading || !prompt.trim()}
+          style={{
+            background: "#011F5B",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            padding: "6px 14px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: isLoading || !prompt.trim() ? "not-allowed" : "pointer",
+            opacity: isLoading || !prompt.trim() ? 0.6 : 1,
+          }}
+        >
+          {isLoading ? "Sending…" : "Send"}
+        </button>
+      </div>
+      {apiState.status === "loading" && (
+        <p style={{ color: "#9ca3af", fontSize: 13, margin: 0 }}>Waiting for response…</p>
+      )}
+      {apiState.status === "error" && (
+        <div
+          style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 6,
+            padding: "10px 14px",
+            fontSize: 13,
+            color: "#b91c1c",
+          }}
+        >
+          {apiState.error}
+        </div>
+      )}
+      {apiState.status === "success" && apiState.data && (
+        <div
+          style={{
+            background: "#f9fafb",
+            border: "1px solid #e5e7eb",
+            borderRadius: 6,
+            padding: "12px 16px",
+          }}
+        >
+          <p style={{ fontSize: 13, color: "#111827", margin: "0 0 10px", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+            {apiState.data.content}
+          </p>
+          <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#9ca3af", borderTop: "1px solid #e5e7eb", paddingTop: 8 }}>
+            <span>model: <span style={{ fontFamily: "ui-monospace, monospace" }}>{apiState.data.model}</span></span>
+            <span>tokens: {apiState.data.usage.totalTokens}</span>
+          </div>
         </div>
       )}
     </div>
