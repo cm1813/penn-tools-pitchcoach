@@ -37,8 +37,10 @@
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@penntools/core": "workspace:*",
     "@prisma/client": "^5.14.0",
+    "openai": "^4.0.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {

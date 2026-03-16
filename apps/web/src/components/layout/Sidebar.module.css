@@ -111,9 +111,29 @@
   min-width: 0;
 }
 
+/* API Key section — pinned just above user row */
+.apiKeySection {
+  margin-top: auto;
+}
+
+/* API Key input */
+.apiKeyInput {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: monospace;
+  outline: none;
+  box-sizing: border-box;
+}
+.apiKeyInput:focus { border-color: var(--text); }
+.apiKeyInput::placeholder { color: var(--section-label); }
+
 /* User row */
 .userRow {
-  margin-top: auto;
   padding: 8px 4px;
   display: flex;
   align-items: center;

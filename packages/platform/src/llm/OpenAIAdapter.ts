@@ -1,10 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// OpenAI adapter — STUB
-//
-// Replace the TODO bodies with the openai npm package calls when ready.
-// The interface contract is fully defined in @penntools/core/llm.
+// OpenAI adapter
 // ─────────────────────────────────────────────────────────────────────────────
 
+import OpenAI from "openai";
 import type {
   LLMProvider,
   CompletionRequest,
@@ -24,28 +22,74 @@ export class OpenAIAdapter implements LLMProvider {
   }
 
   async complete(request: CompletionRequest): Promise<CompletionResponse> {
-    // TODO: import openai and call openai.chat.completions.create(...)
-    // Example:
-    //   const openai = new OpenAI({ apiKey: this.apiKey });
-    //   const res = await openai.chat.completions.create({
-    //     model: request.model ?? this.defaultModel,
-    //     messages: request.messages,
-    //     max_tokens: request.maxTokens,
-    //   });
-    //   return { content: res.choices[0].message.content ?? "", ... };
+    const openai = new OpenAI({ apiKey: this.apiKey });
+    const model = request.model ?? this.defaultModel;
 
-    void this.apiKey; // suppress unused warning in stub
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+
+    if (request.systemPrompt) {
+      messages.push({ role: "system", content: request.systemPrompt });
+    }
+
+    for (const m of request.messages) {
+      if (m.role === "system" && request.systemPrompt) continue;
+      messages.push({ role: m.role, content: m.content });
+    }
+
+    const response = await openai.chat.completions.create({
+      model,
+      messages,
+      ...(request.maxTokens !== undefined && { max_tokens: request.maxTokens }),
+      ...(request.temperature !== undefined && {
+        temperature: request.temperature,
+      }),
+    });
+
+    const content = response.choices[0]?.message.content ?? "";
+
     return {
-      content: `[OpenAI stub] Echo: ${request.messages.at(-1)?.content ?? ""}`,
-      model: request.model ?? this.defaultModel,
-      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      content,
+      model: response.model,
+      usage: {
+        promptTokens: response.usage?.prompt_tokens ?? 0,
+        completionTokens: response.usage?.completion_tokens ?? 0,
+        totalTokens: response.usage?.total_tokens ?? 0,
+      },
     };
   }
 
   async *stream(request: CompletionRequest): AsyncGenerator<StreamChunk> {
-    // TODO: use openai streaming API
-    const response = await this.complete(request);
-    yield { delta: response.content, done: false };
+    const openai = new OpenAI({ apiKey: this.apiKey });
+    const model = request.model ?? this.defaultModel;
+
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+
+    if (request.systemPrompt) {
+      messages.push({ role: "system", content: request.systemPrompt });
+    }
+
+    for (const m of request.messages) {
+      if (m.role === "system" && request.systemPrompt) continue;
+      messages.push({ role: m.role, content: m.content });
+    }
+
+    const stream = await openai.chat.completions.create({
+      model,
+      messages,
+      ...(request.maxTokens !== undefined && { max_tokens: request.maxTokens }),
+      ...(request.temperature !== undefined && {
+        temperature: request.temperature,
+      }),
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta.content ?? "";
+      if (delta) {
+        yield { delta, done: false };
+      }
+    }
+
     yield { delta: "", done: true };
   }
 }

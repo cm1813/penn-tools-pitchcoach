@@ -62,9 +62,15 @@ export function useChat({ userId, chatId }: UseChatOptions): UseChatResult {
       setMessages((prev) => [...prev, optimistic]);
 
       try {
+        const apiKey = typeof window !== "undefined"
+          ? (localStorage.getItem("penntools_api_key") ?? "")
+          : "";
         const res = await fetch("/api/chat/send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiKey ? { "X-Api-Key": apiKey } : {}),
+          },
           body: JSON.stringify({ chatId, content }),
         });
         const data = (await res.json()) as {

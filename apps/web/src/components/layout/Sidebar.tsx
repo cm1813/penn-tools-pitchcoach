@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { Chat } from "@penntools/core/types";
 import type { ToolManifest } from "@penntools/core/tools";
@@ -54,6 +55,18 @@ function IconGrid() {
 }
 
 export function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, tools }: SidebarProps) {
+  const [apiKey, setApiKey] = useState("");
+
+  useEffect(() => {
+    setApiKey(localStorage.getItem("penntools_api_key") ?? "");
+  }, []);
+
+  function handleKeyChange(val: string) {
+    setApiKey(val);
+    if (val) localStorage.setItem("penntools_api_key", val);
+    else localStorage.removeItem("penntools_api_key");
+  }
+
   return (
     <aside className={styles.sidebar}>
       {/* Top nav */}
@@ -100,6 +113,18 @@ export function Sidebar({ chats, activeChatId, onSelectChat, onNewChat, tools }:
             </button>
           ))}
         </div>
+      </div>
+
+      {/* API Key */}
+      <div className={`${styles.section} ${styles.apiKeySection}`}>
+        <p className={styles.sectionLabel}>API Key</p>
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => handleKeyChange(e.target.value)}
+          placeholder="sk-… or sk-ant-…"
+          className={styles.apiKeyInput}
+        />
       </div>
 
       {/* Bottom: user */}

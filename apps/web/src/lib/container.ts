@@ -84,6 +84,17 @@ function createLLMProvider(): LLMProvider {
 
 export const llm: LLMProvider = createLLMProvider();
 
+/**
+ * Create a per-request LLM provider from a user-supplied API key.
+ * Detects provider by key prefix: "sk-ant-" → Anthropic, otherwise → OpenAI.
+ */
+export function createLLMFromKey(apiKey: string): LLMProvider {
+  if (apiKey.startsWith("sk-ant-")) {
+    return new AnthropicAdapter(apiKey);
+  }
+  return new OpenAIAdapter(apiKey);
+}
+
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 function createAnalytics(): Analytics {

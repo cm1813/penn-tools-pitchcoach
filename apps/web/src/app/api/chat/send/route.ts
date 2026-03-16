@@ -23,7 +23,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { resolveIdentity } from "@/lib/resolveIdentity";
-import { repositories, llm, toolRunner, logger } from "@/lib/container";
+import { repositories, llm, toolRunner, logger, createLLMFromKey } from "@/lib/container";
 import { ToolNotFoundError, ToolAccessDeniedError } from "@penntools/core/tools";
 
 interface SendBody {
@@ -39,6 +39,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!chatId || !content) {
     return NextResponse.json({ error: "chatId and content are required" }, { status: 400 });
   }
+
+  const userApiKey = req.headers.get("X-Api-Key");
+  const requestLlm = userApiKey ? createLLMFromKey(userApiKey) : llm;
 
   // ── Auth check: chat must belong to this user ───────────────────────────
   const chat = await repositories.chats.findById(chatId);
@@ -76,7 +79,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     try {
-      const output = await toolRunner.run(toolId, toolInput, userId);
+      const output = await toolRunner.run(toolId, toolInput, userId, { llm: requestLlm });
       assistantContent = output.assistantMessage;
       assistantToolId = toolId;
     } catch (err) {
@@ -93,7 +96,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // ── Direct LLM path ───────────────────────────────────────────────────
     const history = await repositories.messages.findByChatId(chatId);
 
-    const llmResponse = await llm.complete({
+    const llmResponse = await requestLlm.complete({
       systemPrompt:
         "You are AskPenn, a helpful assistant for University of Pennsylvania students and staff.",
       messages: history.map((m) => ({

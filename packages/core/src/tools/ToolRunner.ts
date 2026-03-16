@@ -17,6 +17,7 @@ import type { ToolManifest, ToolOutput } from "./Tool.js";
 import type { ToolContext, Logger } from "./ToolContext.js";
 import type { ToolRegistry } from "./ToolRegistry.js";
 import type { UserId } from "../types/index.js";
+import type { LLMProvider } from "../llm/LLMProvider.js";
 
 // ── Errors ────────────────────────────────────────────────────────────────────
 
@@ -75,7 +76,8 @@ export class ToolRunner {
     toolId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     input: any,
-    userId: UserId
+    userId: UserId,
+    options?: { llm?: LLMProvider }
   ): Promise<ToolOutput> {
     const tool = this.registry.get(toolId);
     if (!tool) {
@@ -87,11 +89,12 @@ export class ToolRunner {
     }
 
     const context = await this.contextFactory(toolId, userId);
+    const effectiveContext = options?.llm ? { ...context, llm: options.llm } : context;
     const start = Date.now();
 
     this.logger.info("tool.run.start", { toolId, userId });
 
-    const output = await tool.execute(input, context);
+    const output = await tool.execute(input, effectiveContext);
 
     const durationMs = Date.now() - start;
     this.logger.info("tool.run.complete", { toolId, userId, durationMs });
