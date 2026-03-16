@@ -155,13 +155,12 @@ export const logger = {
 };
 
 // ── Seed resources on startup (fire-and-forget) ────────────────────────────────
-// Runs after the logger is initialised so we can report progress.
-// Errors are caught inside seedResources and logged; they never crash the app.
-if (embeddingProvider) {
-  seedResources(embeddingProvider, resourceRepository, logger).catch((err) =>
-    logger.error("[container] seedResources unexpectedly threw", err)
-  );
-}
+// TODO: Uncomment once pgvector is provisioned and OPENAI_API_KEY is set.
+// if (embeddingProvider) {
+//   seedResources(embeddingProvider, resourceRepository, logger).catch((err) =>
+//     logger.error("[container] seedResources unexpectedly threw", err)
+//   );
+// }
 
 // ── ToolRunner ────────────────────────────────────────────────────────────────
 
