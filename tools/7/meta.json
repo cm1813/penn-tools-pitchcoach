@@ -1,0 +1,10 @@
+{
+  "name": "PitchCoach.AI",
+  "description": "AI-powered communication coaching tool designed to help students improve their networking pitches and behavioral interview responses through structured, private practice",
+  "category": "Recruiting",
+  "builders": ["Hannah Guo", "Ariana Katsanis", "Tony Sui", "Chithira Mamallan"],
+  "mentor": "Sanjana Wadhwa",
+  "version": "0.0.1",
+  "inceptionDate": "2026-03-18",
+  "latestReleaseDate": "2026-03-18"
+}
