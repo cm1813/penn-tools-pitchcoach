@@ -35,6 +35,9 @@ importers:
       '@penntools/tool-7':
         specifier: workspace:*
         version: link:../../tools/7
+      '@penntools/tool-8':
+        specifier: workspace:*
+        version: link:../../tools/8
       '@penntools/tool-platform-playground':
         specifier: workspace:*
         version: link:../../tools/platform-playground
@@ -99,6 +102,7 @@ importers:
         version: 5.9.3
 
   tools/7:
+  tools/8:
     dependencies:
       '@penntools/core':
         specifier: workspace:*
